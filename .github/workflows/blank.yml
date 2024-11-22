@@ -19,5 +19,5 @@ jobs:
       - name: Create archive directory
         run: mkdir -p archive
 
-      - name: Copy repository contents to archive folder
-        run: rsync -av --progress ./ ./archive/ --exclude archive
+      - name: Copy src folder to archive
+        run: cp -r src archive/
