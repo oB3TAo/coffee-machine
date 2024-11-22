@@ -20,4 +20,4 @@ jobs:
         run: mkdir -p archive
 
       - name: Copy repository contents to archive folder
-        run: cp -r ./* archive/
+        run: rsync -av --progress ./ ./archive/ --exclude archive
