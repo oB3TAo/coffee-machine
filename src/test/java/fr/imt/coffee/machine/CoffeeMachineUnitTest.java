@@ -106,19 +106,15 @@ public class CoffeeMachineUnitTest {
      * On ne compte pas sur "le bon fonctionnement de la méthode"
      */
     @Test
-    public void testMakeACoffeeCupNotEmptyException(){
+    public void testMakeACoffeeCupNotEmptyException() {
         Cup mockCup = Mockito.mock(Cup.class);
         Mockito.when(mockCup.isEmpty()).thenReturn(false);
 
         coffeeMachineUnderTest.plugToElectricalPlug();
 
-        //assertThrows( [Exception class expected], [lambda expression with the method that throws an exception], [exception message expected])
-        //AssertThrows va permettre de venir tester la levée d'une exception, ici lorsque que le contenant passé en
-        //paramètre n'est pas vide
-        //On teste à la fois le type d'exception levée mais aussi le message de l'exception
-        Assertions.assertThrows(CupNotEmptyException.class, ()->{
-                coffeeMachineUnderTest.makeACoffee(mockCup, CoffeeType.MOKA);
-            });
+        Assertions.assertThrows(CupNotEmptyException.class, () -> {
+            coffeeMachineUnderTest.makeACoffee(mockCup, CoffeeType.MOKA);
+        });
     }
 
     @AfterEach
