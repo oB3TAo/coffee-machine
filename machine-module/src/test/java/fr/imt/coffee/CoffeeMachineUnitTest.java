@@ -1,5 +1,6 @@
-package fr.imt.coffee.machine;
+package fr.imt.coffee;
 
+import fr.imt.coffee.machine.CoffeeMachine;
 import fr.imt.coffee.storage.cupboard.coffee.type.CoffeeType;
 import fr.imt.coffee.storage.cupboard.container.Cup;
 import fr.imt.coffee.storage.cupboard.exception.CupNotEmptyException;

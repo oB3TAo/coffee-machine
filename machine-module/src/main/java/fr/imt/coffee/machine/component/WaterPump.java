@@ -1,6 +1,5 @@
 package fr.imt.coffee.machine.component;
 
-import fr.imt.coffee.MainCoffee;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
