@@ -21,7 +21,7 @@ jobs:
           cache: maven
 
       - name: Build All Modules
-        run: mvn -B clean install
+        run: mvn -B clean install -pl machine-module -am
 
       - name: Run Tests
         run: mvn -B test
