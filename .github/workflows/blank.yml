@@ -21,4 +21,4 @@ jobs:
           cache: maven
 
       - name: Build Parent Module
-        run: mvn -B clean build
+        run: mvn -B clean test verify --file pom.xml
