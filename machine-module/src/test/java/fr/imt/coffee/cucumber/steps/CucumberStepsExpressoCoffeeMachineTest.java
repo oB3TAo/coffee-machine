@@ -4,6 +4,7 @@ import fr.imt.coffee.machine.EspressoCoffeeMachine;
 import fr.imt.coffee.machine.exception.CoffeeTypeCupDifferentOfCoffeeTypeTankException;
 import fr.imt.coffee.machine.exception.LackOfWaterInTankException;
 import fr.imt.coffee.machine.exception.MachineNotPluggedException;
+import fr.imt.coffee.machine.exception.OutOfOrderException;
 import fr.imt.coffee.storage.cupboard.container.CoffeeCup;
 import fr.imt.coffee.storage.cupboard.container.Cup;
 import fr.imt.coffee.storage.cupboard.coffee.type.CoffeeType;
@@ -24,7 +25,7 @@ public class CucumberStepsExpressoCoffeeMachineTest {
 
     @Given("an espresso coffee machine with water and coffee beans")
     public void setupCoffeeMachine() {
-        coffeeMachine = new EspressoCoffeeMachine(0.1, 1.0, 0.5, 2.0, 0.2);
+        coffeeMachine = new EspressoCoffeeMachine(0, 10, 0, 10, 700);
         coffeeMachine.plugToElectricalPlug();
         coffeeMachine.addWaterInTank(1.0);
         coffeeMachine.addCoffeeInBeanTank(0.5, CoffeeType.ARABICA);
@@ -32,8 +33,8 @@ public class CucumberStepsExpressoCoffeeMachineTest {
 
     @And("an empty coffee cup with capacity {double}")
     public void setupCoffeeCup(double capacity) {
-        Cup cup = new Cup(capacity);
-        coffeeCup = null; // Initialize as null; the method makeACoffee will populate it
+        coffeeCup = new CoffeeCup(new Cup(capacity), null);
+        coffeeCup.setEmpty(true);
     }
 
     @When("I select the coffee type {string}")
@@ -44,7 +45,7 @@ public class CucumberStepsExpressoCoffeeMachineTest {
     @And("I make a coffee")
     public void makeCoffee() {
         try {
-            coffeeCup = (CoffeeCup) coffeeMachine.makeACoffee(new Cup(0.25), selectedCoffeeType); // Example for a 0.25L cup
+            coffeeCup = (CoffeeCup) coffeeMachine.makeACoffee(new Cup(0.25), selectedCoffeeType); // Adjusted for proper casting
             exceptionThrown = false;
         } catch (LackOfWaterInTankException e) {
             exceptionThrown = true;
@@ -55,6 +56,9 @@ public class CucumberStepsExpressoCoffeeMachineTest {
         } catch (CupNotEmptyException e) {
             exceptionThrown = true;
             exceptionMessage = "The container given is not empty.";
+        } catch (OutOfOrderException e) {
+            exceptionThrown = true;
+            exceptionMessage = "The coffee machine is out of order. Please reset it.";
         } catch (CoffeeTypeCupDifferentOfCoffeeTypeTankException e) {
             exceptionThrown = true;
             exceptionMessage = "The type of coffee to be made in the cup is different from that in the tank.";
@@ -63,6 +67,7 @@ public class CucumberStepsExpressoCoffeeMachineTest {
             exceptionMessage = e.getMessage();
         }
     }
+
 
     @Then("the coffee cup should contain coffee of type {string}")
     public void verifyCoffee(String expectedCoffeeType) {
