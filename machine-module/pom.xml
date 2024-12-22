@@ -8,7 +8,6 @@
         <groupId>fr.imt.coffee</groupId>
         <artifactId>coffee-machine</artifactId>
         <version>1.0-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>machine-module</artifactId>
