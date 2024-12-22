@@ -5,6 +5,7 @@ import fr.imt.coffee.machine.component.SteamPipe;
 import fr.imt.coffee.machine.exception.CoffeeTypeCupDifferentOfCoffeeTypeTankException;
 import fr.imt.coffee.machine.exception.LackOfWaterInTankException;
 import fr.imt.coffee.machine.exception.MachineNotPluggedException;
+import fr.imt.coffee.machine.exception.OutOfOrderException;
 import fr.imt.coffee.storage.cupboard.coffee.type.CoffeeType;
 import fr.imt.coffee.storage.cupboard.container.*;
 import fr.imt.coffee.storage.cupboard.exception.CupNotEmptyException;
@@ -36,41 +37,45 @@ public class EspressoCoffeeMachine extends CoffeeMachine{
      * @throws InterruptedException Exception levée lorsqu'un problème survient dans les Threads lors du sleep
      * @throws CoffeeTypeCupDifferentOfCoffeeTypeTankException Exception levée lorsque le café souhaité est différent de celui chargé dans le réservoir de la cafetière
      */
-    public CoffeeContainer makeACoffee(Container container, CoffeeType coffeeType) throws LackOfWaterInTankException, InterruptedException, MachineNotPluggedException, CupNotEmptyException, CoffeeTypeCupDifferentOfCoffeeTypeTankException {
-        if(!isPlugged()){
-            throw new LackOfWaterInTankException("You must plug your coffee machine");
+    public CoffeeContainer makeACoffee(Container container, CoffeeType coffeeType) throws LackOfWaterInTankException, InterruptedException, MachineNotPluggedException, CupNotEmptyException, CoffeeTypeCupDifferentOfCoffeeTypeTankException, OutOfOrderException {
+        if (!isPlugged()) {
+            throw new MachineNotPluggedException("You must plug your coffee machine.");
         }
 
-        if (getWaterTank().getActualVolume() < container.getCapacity()){
+        if (getWaterTank().getActualVolume() < container.getCapacity()) {
             throw new LackOfWaterInTankException("You must add more water in the water tank.");
         }
 
-        if (!container.isEmpty()){
-            throw new CupNotEmptyException("The container given is not empty or null.");
+        if (!container.isEmpty()) {
+            throw new CupNotEmptyException("The container given is not empty.");
         }
 
-        if(coffeeType != this.beanTank.getBeanCoffeeType() && coffeeType != this.secondaryBeanTank.getBeanCoffeeType()){
-            throw new CoffeeTypeCupDifferentOfCoffeeTypeTankException("The type of coffee to be made in the cup is different from that in the tank.");
+        if (coffeeType != getBeanTank().getBeanCoffeeType() &&
+                coffeeType != secondaryBeanTank.getBeanCoffeeType()) {
+            throw new CoffeeTypeCupDifferentOfCoffeeTypeTankException(
+                    "The type of coffee to be made in the cup is different from that in the tank.");
         }
 
         coffeeMachineFailure();
 
-        if(isOutOfOrder()){
-            logger.warn("The machine is out of order. Please reset the coffee machine");
-            return null;
+        if (isOutOfOrder()) {
+            logger.warn("The machine is out of order. Please reset the coffee machine.");
+            throw new OutOfOrderException("The coffee machine is out of order. Please reset it.");
         }
 
         getElectricalResistance().waterHeating(container.getCapacity());
         getWaterPump().pumpWater(container.getCapacity(), getWaterTank());
-        getCoffeeGrinder().grindCoffee(getBeanTank().getBeanCoffeeType().equals(coffeeType) ? getBeanTank() : secondaryBeanTank);
+        getCoffeeGrinder().grindCoffee(
+                getBeanTank().getBeanCoffeeType().equals(coffeeType) ? getBeanTank() : secondaryBeanTank);
 
-        CoffeeContainer coffeeContainer = null;
-        if(container instanceof Cup)
-            coffeeContainer = new CoffeeCup((Cup) container, coffeeType);
-        if(container instanceof Mug)
-            coffeeContainer = new CoffeeMug((Mug) container, coffeeType);
+        if (container instanceof CoffeeCup) {
+            return new CoffeeCup(container.getCapacity(), coffeeType);
+        } else if (container instanceof CoffeeMug) {
+            return new CoffeeMug(container.getCapacity(), coffeeType);
+        }
 
-        coffeeContainer.setEmpty(false);
-        return coffeeContainer;
+        container.setEmpty(false);
+        return (CoffeeContainer) container;
     }
 }
+

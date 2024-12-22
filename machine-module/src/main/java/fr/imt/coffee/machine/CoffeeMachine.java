@@ -1,10 +1,7 @@
 package fr.imt.coffee.machine;
 
 import fr.imt.coffee.machine.component.*;
-import fr.imt.coffee.machine.exception.CannotMakeCremaWithSimpleCoffeeMachine;
-import fr.imt.coffee.machine.exception.CoffeeTypeCupDifferentOfCoffeeTypeTankException;
-import fr.imt.coffee.machine.exception.LackOfWaterInTankException;
-import fr.imt.coffee.machine.exception.MachineNotPluggedException;
+import fr.imt.coffee.machine.exception.*;
 import fr.imt.coffee.storage.cupboard.coffee.type.CoffeeType;
 import fr.imt.coffee.storage.cupboard.container.*;
 import fr.imt.coffee.storage.cupboard.exception.CupNotEmptyException;
@@ -28,10 +25,10 @@ public class CoffeeMachine {
     private Random randomGenerator;
 
     public CoffeeMachine(double minCoffeeBeanTank, double maxCoffeeBeanTank, double minWaterTank, double maxWaterTank,
-                         double pumpingCapacity){
-        this.beanTank = new BeanTank(0, minCoffeeBeanTank, maxCoffeeBeanTank, null);
-        this.waterTank = new WaterTank(0, minWaterTank, maxWaterTank);
-        this.waterPump = new WaterPump(pumpingCapacity/3600); //On convertit les L/h en L/seconde
+                         double pumpingCapacity) {
+        this.beanTank = new BeanTank(minCoffeeBeanTank, minCoffeeBeanTank, maxCoffeeBeanTank, null);
+        this.waterTank = new WaterTank(minWaterTank, minWaterTank, maxWaterTank);
+        this.waterPump = new WaterPump(pumpingCapacity / 3600);
         this.electricalResistance = new ElectricalResistance(1000);
         this.coffeeGrinder = new CoffeeGrinder(2000);
         this.isPlugged = false;
@@ -58,13 +55,20 @@ public class CoffeeMachine {
      * Ajoute de l'eau dans le réservoir
      * @param waterVolume Volume d'eau en litres à ajouter
      */
-    public void addWaterInTank(double waterVolume){
+    public void addWaterInTank(double waterVolume) {
+        if (waterTank.getActualVolume() + waterVolume > waterTank.getMaxVolume()) {
+            throw new IllegalArgumentException("Volume exceeds maximum tank capacity.");
+        }
         this.waterTank.increaseVolumeInTank(waterVolume);
     }
 
-    public void addCoffeeInBeanTank(double coffeeVolume, CoffeeType coffeeType){
+    public void addCoffeeInBeanTank(double coffeeVolume, CoffeeType coffeeType) {
+        if (beanTank.getActualVolume() + coffeeVolume > beanTank.getMaxVolume()) {
+            throw new IllegalArgumentException("Volume exceeds maximum bean tank capacity.");
+        }
         beanTank.increaseCoffeeVolumeInTank(coffeeVolume, coffeeType);
     }
+
 
     /**
      * Permet de faire couler un café à partir d'un contenant et d'un type de café
@@ -84,44 +88,42 @@ public class CoffeeMachine {
      */
     public CoffeeContainer makeACoffee(Container container, CoffeeType coffeeType)
             throws LackOfWaterInTankException, InterruptedException, MachineNotPluggedException,
-            CupNotEmptyException, CoffeeTypeCupDifferentOfCoffeeTypeTankException, CannotMakeCremaWithSimpleCoffeeMachine {
+            CupNotEmptyException, CoffeeTypeCupDifferentOfCoffeeTypeTankException, CannotMakeCremaWithSimpleCoffeeMachine, EmptyBeanTankException, OutOfOrderException {
 
-        // Check if the machine is plugged in
         if (!isPlugged) {
             throw new MachineNotPluggedException("You must plug your coffee machine.");
         }
 
-        // Check if there is enough water in the tank
         if (waterTank.getActualVolume() < container.getCapacity()) {
             throw new LackOfWaterInTankException("You must add more water in the water tank.");
         }
 
-        // Check if the container is empty
         if (!container.isEmpty()) {
             throw new CupNotEmptyException("The container given is not empty.");
         }
 
-        // Check if the coffee type matches the type in the tank
+        if (beanTank.isEmpty()) {
+            throw new EmptyBeanTankException("The bean tank is empty.");
+        }
+
         if (coffeeType != this.beanTank.getBeanCoffeeType()) {
             throw new CoffeeTypeCupDifferentOfCoffeeTypeTankException(
-                    "The type of coffee to be made in the cup is different from that in the tank.");
+                    "The type of coffee to be made in the cup is different from that in the tank."
+            );
         }
 
-        // Simulate machine failure
         coffeeMachineFailure();
 
-        if (isOutOfOrder) {
-            logger.warn("The machine is out of order. Please reset the coffee machine");
-            return null;
+        if (isOutOfOrder()) {
+            logger.warn("The machine is out of order. Please reset the coffee machine.");
+            throw new OutOfOrderException("The coffee machine is out of order. Please reset it.");
         }
 
-        // Check if trying to make Crema coffee with a simple machine
         if (coffeeType.toString().contains("_CREMA")) {
             throw new CannotMakeCremaWithSimpleCoffeeMachine(
                     "You cannot make an espresso with a CoffeeMachine, please use EspressoCoffeeMachine.");
         }
 
-        // Prepare the coffee
         electricalResistance.waterHeating(container.getCapacity());
         waterPump.pumpWater(container.getCapacity(), waterTank);
         coffeeGrinder.grindCoffee(this.beanTank);
@@ -135,7 +137,7 @@ public class CoffeeMachine {
         if (coffeeContainer == null) {
             throw new IllegalArgumentException("Unsupported container type provided.");
         }
-        coffeeContainer.setEmpty(false); // Set the container as filled with coffee
+        coffeeContainer.setEmpty(false);
         return coffeeContainer;
     }
 

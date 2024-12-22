@@ -12,11 +12,10 @@ import org.junit.runner.RunWith;
 @RunWith(Cucumber.class)
 @CucumberOptions(
         features = {"classpath:functional/features/"},
-        glue = "fr.imt.coffee.machine.cucumber.steps"
+        glue = {"fr.imt.coffee.cucumber.steps"}
 )
 //Permet d'ignorer les tests fonctionnels de Cucumber
 //Ne lance pas la class CoffeeMachineFunctionalTest
 @Ignore
 public class CoffeeMachineCucumberFunctionalTest {
-
 }

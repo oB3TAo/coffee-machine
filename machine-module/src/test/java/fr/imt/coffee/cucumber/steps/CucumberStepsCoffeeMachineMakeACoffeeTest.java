@@ -1,10 +1,7 @@
 package fr.imt.coffee.cucumber.steps;
 
 import fr.imt.coffee.machine.CoffeeMachine;
-import fr.imt.coffee.machine.exception.CannotMakeCremaWithSimpleCoffeeMachine;
-import fr.imt.coffee.machine.exception.CoffeeTypeCupDifferentOfCoffeeTypeTankException;
-import fr.imt.coffee.machine.exception.LackOfWaterInTankException;
-import fr.imt.coffee.machine.exception.MachineNotPluggedException;
+import fr.imt.coffee.machine.exception.*;
 import fr.imt.coffee.storage.cupboard.coffee.type.CoffeeType;
 import fr.imt.coffee.storage.cupboard.container.*;
 import fr.imt.coffee.storage.cupboard.exception.CupNotEmptyException;
@@ -21,25 +18,33 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 
-
 public class CucumberStepsCoffeeMachineMakeACoffeeTest {
 
     public CoffeeMachine coffeeMachine;
     public Mug mug;
     public Cup cup;
     public CoffeeContainer containerWithCoffee;
+    public Exception capturedException;
 
-    @Given("a coffee machine with {double} l of min capacity, {double} l of max capacity, {double} l per h of water flow for the pump")
-    public void givenACoffeeMachine(double minimalWaterCapacity, double maximalWaterCapacity, double pumpWaterFlow){
+    @Given("a coffee machine with {double} l of min capacity, {double} l of max capacity, and {double} l per hour of water flow for the pump")
+    public void givenACoffeeMachine(double minimalWaterCapacity, double maximalWaterCapacity, double pumpWaterFlow) {
         coffeeMachine = new CoffeeMachine(minimalWaterCapacity, maximalWaterCapacity, minimalWaterCapacity, maximalWaterCapacity, pumpWaterFlow);
     }
 
-    @And("a {string} with a capacity of {double}")
+    @And("a {string} with a capacity of {double} liters")
     public void aWithACapacityOf(String containerType, double containerCapacity) {
         if ("mug".equals(containerType))
             mug = new Mug(containerCapacity);
         if ("cup".equals(containerType))
             cup = new Cup(containerCapacity);
+    }
+
+    @And("the {string} is not empty")
+    public void theContainerIsNotEmpty(String containerType) {
+        if ("mug".equals(containerType))
+            mug.setEmpty(false);
+        if ("cup".equals(containerType))
+            cup.setEmpty(false);
     }
 
     @When("I plug the machine to electricity")
@@ -57,36 +62,38 @@ public class CucumberStepsCoffeeMachineMakeACoffeeTest {
         coffeeMachine.addCoffeeInBeanTank(beanVolume, CoffeeType.valueOf(coffeeType));
     }
 
-    @And("I made a coffee {string}")
-    public void iMadeACoffee(String coffeeType) throws InterruptedException, CupNotEmptyException, LackOfWaterInTankException, MachineNotPluggedException, CoffeeTypeCupDifferentOfCoffeeTypeTankException, CannotMakeCremaWithSimpleCoffeeMachine {
-        //On créé un mock de l'objet random
-        Random randomMock = Mockito.mock(Random.class, Mockito.withSettings().withoutAnnotations());
-        //On vient ensuite stubber la méthode nextGaussian pour pouvoir controler la valeur retournée
-        //ici on veut qu'elle retourne 0.6
-        Mockito.when(randomMock.nextGaussian()).thenReturn(0.6);
-        //On injecte ensuite le mock créé dans la machine à café
-        coffeeMachine.setRandomGenerator(randomMock);
+    @And("I make a coffee {string}")
+    public void iMakeACoffee(String coffeeType) {
+        try {
+            Random randomMock = Mockito.mock(Random.class, Mockito.withSettings().withoutAnnotations());
+            Mockito.when(randomMock.nextGaussian()).thenReturn(0.6);
+            coffeeMachine.setRandomGenerator(randomMock);
 
-        if (mug != null)
-            containerWithCoffee = coffeeMachine.makeACoffee(mug, CoffeeType.valueOf(coffeeType));
-        if (cup != null)
-            containerWithCoffee = coffeeMachine.makeACoffee(cup, CoffeeType.valueOf(coffeeType));
-
+            if (mug != null)
+                containerWithCoffee = coffeeMachine.makeACoffee(mug, CoffeeType.valueOf(coffeeType));
+            if (cup != null)
+                containerWithCoffee = coffeeMachine.makeACoffee(cup, CoffeeType.valueOf(coffeeType));
+        } catch (Exception e) {
+            capturedException = e;
+        }
     }
-    
-    @Then("the coffee machine return a coffee mug not empty")
-    public void theCoffeeMachineReturnACoffeeMugNotEmpty() {
+
+    @Then("the coffee machine returns a coffee {string} not empty")
+    public void theCoffeeMachineReturnsACoffeeContainerNotEmpty(String containerType) {
         Assertions.assertFalse(containerWithCoffee.isEmpty());
+        if ("mug".equals(containerType))
+            assertThat(containerWithCoffee, instanceOf(CoffeeMug.class));
+        if ("cup".equals(containerType))
+            assertThat(containerWithCoffee, instanceOf(CoffeeCup.class));
     }
 
-
-    @And("a coffee volume equals to {double}")
-    public void aCoffeeVolumeEqualsTo(double coffeeVolume) {
+    @And("the coffee volume equals to {double} liters")
+    public void theCoffeeVolumeEqualsTo(double coffeeVolume) {
         assertThat(coffeeVolume, is(containerWithCoffee.getCapacity()));
     }
 
-    @And("a coffee {string} containing a coffee type {string}")
-    public void aCoffeeMugContainingACoffeeType(String containerType, String coffeeType) {
+    @And("the coffee {string} contains a coffee type {string}")
+    public void theCoffeeContainerContainsACoffeeType(String containerType, String coffeeType) {
         if ("mug".equals(containerType))
             assertThat(containerWithCoffee, instanceOf(CoffeeMug.class));
         if ("cup".equals(containerType))
@@ -95,5 +102,10 @@ public class CucumberStepsCoffeeMachineMakeACoffeeTest {
         assertThat(containerWithCoffee.getCoffeeType(), is(CoffeeType.valueOf(coffeeType)));
     }
 
-
+    @Then("an error {string} is thrown")
+    public void anErrorIsThrown(String errorMessage) {
+        Assertions.assertNotNull(capturedException, "No exception was thrown.");
+        Assertions.assertEquals(errorMessage, capturedException.getMessage(),
+                "Expected error message does not match the actual message.");
+    }
 }
